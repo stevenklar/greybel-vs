@@ -34,6 +34,18 @@ import documentParseQueue from './helper/document-manager';
 import { LookupHelper } from './helper/lookup-type';
 import { TypeInfo, TypeInfoWithDefinition } from './helper/type-manager';
 
+function formatType(type: string): string {
+  const segments = type.split(':');
+  if (segments.length === 1) {
+    return segments[0];
+  }
+  return `${segments[0]}<${segments[1]}>`;
+}
+
+function formatTypes(types: string[] = []): string {
+  return types.map(formatType).join(' or ');
+}
+
 export const convertDefinitionsToCompletionList = (
   definitions: SignatureDefinitionContainer
 ): CompletionItem[] => {
@@ -289,7 +301,10 @@ export function activate(_context: ExtensionContext) {
         // Signature args
         const definition = item.definition;
         const args = definition.arguments || [];
-        const returnValues = definition.returns.join(' or ') || 'null';
+
+        const customReturnType = parseReturnTypeFromDocblock(item); // Implement this function
+        const returnValues = customReturnType || formatTypes(definition.returns) || 'null';
+        // const returnValues = definition.returns.join(' or ') || 'null';
         const argValues = args
           .map(
             (item: SignatureDefinitionArg) =>
@@ -320,6 +335,7 @@ export function activate(_context: ExtensionContext) {
 
         signatureInfo.parameters = params;
         signatureInfo.documentation = documentation;
+
         signatureHelp.signatures.push(signatureInfo);
 
         return signatureHelp;
@@ -328,4 +344,15 @@ export function activate(_context: ExtensionContext) {
     ',',
     '('
   );
+}
+function parseReturnTypeFromDocblock(item: TypeInfoWithDefinition) {
+  // Regular expression to find the @return tag and capture the following text
+  const returnTagRegex = /@return\s+([^\s]+)/;
+
+  // Applying the regex to the docblock comment
+  const match = returnTagRegex.exec(item.definition.description);
+
+  // If a match is found, return the captured group (return type)
+  // Otherwise, return null
+  return match ? match[1] : null;
 }

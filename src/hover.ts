@@ -16,6 +16,7 @@ import vscode, {
 import { LookupHelper } from './helper/lookup-type';
 import { TypeInfoWithDefinition } from './helper/type-manager';
 import { PseudoFS } from './resource';
+import { SignatureDefinition } from 'meta-utils';
 
 function formatType(type: string): string {
   const segments = type.split(':');
@@ -102,7 +103,9 @@ export function activate(_context: ExtensionContext) {
       ) {
         const definition = typeInfo.definition;
         const args = definition.arguments || [];
-        const returnValues = formatTypes(definition.returns) || 'null';
+
+        const customReturnType = parseReturnTypeFromDocblock(definition); // Implement this function
+        const returnValues = customReturnType || formatTypes(definition.returns) || 'null';
         let headline;
 
         if (args.length === 0) {
@@ -139,4 +142,16 @@ export function activate(_context: ExtensionContext) {
       return new Hover(hoverText);
     }
   });
+}
+
+function parseReturnTypeFromDocblock(definition: SignatureDefinition) {
+  // Regular expression to find the @return tag and capture the following text
+  const returnTagRegex = /@return\s+([^\s]+)/;
+
+  // Applying the regex to the docblock comment
+  const match = returnTagRegex.exec(definition.description);
+
+  // If a match is found, return the captured group (return type)
+  // Otherwise, return null
+  return match ? formatType(match[1]) : null;
 }
